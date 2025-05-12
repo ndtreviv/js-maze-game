@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maze Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rock+Salt&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            font-family: sans-serif;
+            background: beige;
+            overflow: hidden;
+        }
+
+        #screen-start,
+        #screen-name,
+        #screen-game,
+        #screen-complete,
+        #screen-times {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .visible {
+            display: flex !important;
+        }
+
+        button {
+            background-color: green;
+            color: white;
+            padding: 1em 2em;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+
+        #mazeCanvas {
+            background: beige;
+            display: block;
+            border: 10px solid black;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #coinCount {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            color: black;
+            background: white;
+            padding: 0.5em 1em;
+            border-radius: 10px;
+        }
+
+        .red-btn {
+            background-color: red;
+            margin-top: 20px;
+        }
+
+        /* Ensure canvas resizes smoothly */
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Responsive controls and scaling for small screens */
+        @media (max-width: 600px) {
+            button {
+                font-size: 1em;
+                padding: 0.7em 1.5em;
+            }
+
+            #mazeCanvas {
+                width: 100vw;
+                height: 100vh;
+            }
+
+            #coinCount {
+                font-size: 1.2em;
+                padding: 0.4em 0.8em;
+            }
+
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+
+            #controls {
+                bottom: 10px;
+                left: 10px;
+                gap: 5px;
+                grid-template-columns: 50px 50px 50px;
+                grid-template-rows: 50px 50px;
+            }
+        }
+    </style>
+    <style>
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            font-size: 30px;
+            font-weight: bold;
+            border-radius: 10px;
+            background: white;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid black;
+            user-select: none;
+        }
+
+        .control-btn:active {
+            background: #ddd;
+        }
+
+
+        #gameTitle {
+            font-family: 'Rock Salt', cursive;
+            font-size: 2em;
+            color: #fff;
+            width: 100%;
+            text-align: center;
+            margin-top: 0.5em;
+            text-shadow: 3px 3px 0 #000, -3px -3px 0 #000;
+            animation: pulse 2s ease-in-out infinite;
+            margin-bottom: 1em;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameTitle">MAZE GAME</div>
+    <div id="screen-start" class="visible">
+        <button id="btnStart1">Start Game</button>
+        <button id="btnShowTimes">Times</button>
+    </div>
+    <div id="screen-name">
+        <input id="nameInput" placeholder="Enter your name" />
+        <button id="btnStart2">Start Maze</button>
+    </div>
+    <div id="screen-game">
+        <canvas id="mazeCanvas"></canvas>
+        <div id="coinCount">🪙 0</div>
+    </div>
+    <div id="screen-complete">
+        <h2>Level Complete!</h2>
+        <div>🪙 <span id="totalCoins">0</span></div>
+        <button id="btnNext">Next Level</button>
+        <button id="btnEnd" class="red-btn">End Game</button>
+    </div>
+    <div id="screen-times">
+        <h2>Completion Times</h2>
+        <p id="averageTime"></p>
+        <p id="fastestTime"></p>
+        <p id="medalMessage" style="color:gold;font-weight:bold;"></p>
+        <ul id="timeList"></ul>
+        <button id="btnBackToMenu">Back</button>
+    </div>
+
+    <audio id="popSound"
+        src="https://cdn.pixabay.com/download/audio/2022/02/23/audio_4d2d610b20.mp3?filename=button-124476.mp3"></audio>
+    <audio id="coinSound"
+        src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_b2cb512a44.mp3?filename=coin-pick-up-199316.mp3"></audio>
+
+    <div id="controls">
+        <div></div>
+        <div id="btnUp" class="control-btn">⬆️</div>
+        <div></div>
+        <div id="btnLeft" class="control-btn">⬅️</div>
+        <div id="btnDown" class="control-btn">⬇️</div>
+        <div id="btnRight" class="control-btn">➡️</div>
+    </div>
+
+    <script>
+        const gameTitle = document.getElementById("gameTitle");
+        const screenStart = document.getElementById("screen-start");
+        const screenName = document.getElementById("screen-name");
+        const screenGame = document.getElementById("screen-game");
+        const screenComplete = document.getElementById("screen-complete");
+        const screenTimes = document.getElementById("screen-times");
+        const btnStart1 = document.getElementById("btnStart1");
+        const btnStart2 = document.getElementById("btnStart2");
+        const btnNext = document.getElementById("btnNext");
+        const btnEnd = document.getElementById("btnEnd");
+        const btnShowTimes = document.getElementById("btnShowTimes");
+        const nameInput = document.getElementById("nameInput");
+        const totalCoinsDisplay = document.getElementById("totalCoins");
+        const coinCountDisplay = document.getElementById("coinCount");
+        const popSound = document.getElementById("popSound");
+        const coinSound = document.getElementById("coinSound");
+        const canvas = document.getElementById("mazeCanvas");
+        const ctx = canvas.getContext("2d");
+        const timeList = document.getElementById("timeList");
+        const btnBackToMenu = document.getElementById("btnBackToMenu");
+        btnBackToMenu.onclick = () => showScreen(screenStart);
+
+        let playerName = "";
+        let player = { x: 0, y: 0, size: 20 };
+        let camera = { x: 0, y: 0 };
+        let walls = [];
+        let coins = [];
+        let exit = { x: 0, y: 0, size: 40 };
+        let totalCoins = 0;
+        let collectedThisLevel = 0;
+        let times = [];
+        let startTime = 0;
+        // Blocks with number 20
+        let blocks = [];
+
+        function showScreen(screen) {
+            [screenStart, screenName, screenGame, screenComplete, screenTimes].forEach(s => s.classList.remove("visible"));
+            screen.classList.add("visible");
+        }
+
+        btnStart1.onclick = () => {
+            popSound.play();
+            showScreen(screenName);
+        };
+
+        btnStart2.onclick = () => {
+            gameTitle.className = 'hidden';
+            playerName = nameInput.value || "Player";
+            showScreen(screenGame);
+            startLevel();
+        };
+
+        btnNext.onclick = () => {
+            showScreen(screenGame);
+            startLevel();
+        };
+
+        btnEnd.onclick = () => {
+            location.reload();
+        };
+
+        btnShowTimes.onclick = () => {
+            // Retrieve saved times
+            times = JSON.parse(localStorage.getItem("savedTimes") || "[]");
+            showScreen(screenTimes);
+            if (times.length === 0) {
+                timeList.innerHTML = '<li>No times recorded.</li>';
+                document.getElementById('averageTime').textContent = '';
+                document.getElementById('fastestTime').textContent = '';
+                document.getElementById('medalMessage').textContent = '';
+                return;
+            }
+
+            const average = times.reduce((a, b) => a + b, 0) / times.length;
+            const minTime = Math.min(...times);
+            const minIndex = times.indexOf(minTime);
+
+            // Personal best logic (medal/award system)
+            let bestCount = parseInt(localStorage.getItem("bestCount") || "0", 10);
+            const previousBest = parseFloat(localStorage.getItem("bestTime") || "Infinity");
+
+            if (minTime < previousBest) {
+                bestCount++;
+                localStorage.setItem("bestTime", minTime.toString());
+                localStorage.setItem("bestCount", bestCount.toString());
+
+                let medal = "🏅 New Personal Best! 🏅";
+                if (bestCount === 1) medal = "🥉 Bronze Medal for First Personal Best!";
+                else if (bestCount === 2) medal = "🥈 Silver Medal for Second Personal Best!";
+                else if (bestCount === 3) medal = "🥇 Gold Medal for Third Personal Best!";
+                document.getElementById("medalMessage").textContent = medal;
+            } else {
+                document.getElementById("medalMessage").textContent = "";
+            }
+
+            document.getElementById('averageTime').textContent =
+                `Average Time: ${Math.floor(average / 60)}m ${(average % 60).toFixed(2)}s`;
+
+            document.getElementById('fastestTime').textContent =
+                `Fastest Time: Level ${minIndex + 1} - ${Math.floor(minTime / 60)}m ${(minTime % 60).toFixed(2)}s`;
+
+            timeList.innerHTML = times.map((t, i) => {
+                const minutes = Math.floor(Number(t) / 60);
+                const seconds = (Number(t) % 60).toFixed(2).padStart(5, '0');
+                const isFastest = i === minIndex;
+                return `<li${isFastest ? ' style="font-weight:bold;color:green;"' : ''}>Level ${i + 1}: ${minutes}m ${seconds}s</li>`;
+            }).join('');
+        };
+
+        function startLevel() {
+            // Generate maze first so exit is placed
+            generateMaze();
+
+            // Set canvas to fill the screen
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Find the furthest spawn location from the exit
+            let furthestDistance = -1;
+            let spawnX = 0;
+            let spawnY = 0;
+            for (let row = 0; row < 40; row++) {
+                for (let col = 0; col < 40; col++) {
+                    const x = col * 50;
+                    const y = row * 50;
+                    if (!collidesWall(x + 5, y + 5)) {
+                        const dx = (x - exit.x);
+                        const dy = (y - exit.y);
+                        const distance = dx * dx + dy * dy;
+                        if (distance > furthestDistance) {
+                            furthestDistance = distance;
+                            spawnX = x + 5;
+                            spawnY = y + 5;
+                        }
+                    }
+                }
+            }
+            player.x = spawnX;
+            player.y = spawnY;
+            camera.x = 0;
+            camera.y = 0;
+            collectedThisLevel = 0;
+            updateCoinDisplay();
+            requestAnimationFrame(() => {
+                startTime = performance.now();
+                gameLoop();
+            });
+        }
+
+        function updateCoinDisplay() {
+            coinCountDisplay.textContent = `🪙 ${totalCoins}`;
+        }
+
+        function generateMaze() {
+            walls = [];
+            coins = [];
+            const mazeCols = 40;
+            const mazeRows = 40;
+            // const cellSize = 10;
+            const cellSize = 50;
+
+            // Initialize grid with walls
+            let grid = Array.from({ length: mazeRows }, () => Array(mazeCols).fill(1));
+
+            // Start at top-left corner
+            let x = 1, y = 1;
+            grid[y][x] = 0;
+
+            // Carve a path to a random bottom-right area
+            while (x < mazeCols - 2 || y < mazeRows - 2) {
+                if ((Math.random() < 0.5 && x < mazeCols - 2) || y >= mazeRows - 2) x++;
+                else if (y < mazeRows - 2) y++;
+                grid[y][x] = 0;
+            }
+
+            exit.x = x * cellSize;
+            exit.y = y * cellSize;
+
+            // Add random dead ends
+            for (let row = 1; row < mazeRows - 1; row++) {
+                for (let col = 1; col < mazeCols - 1; col++) {
+                    if (grid[row][col] === 1 && Math.random() < 0.4) {
+                        grid[row][col] = 0;
+                    }
+                }
+            }
+
+            // Create wall objects
+            const mazeSize = mazeCols * cellSize;
+            // const borderThickness = 8;
+            const borderThickness = 40;
+            walls.push(
+                { x: 0, y: 0, w: mazeSize, h: borderThickness },
+                { x: 0, y: mazeSize - borderThickness, w: mazeSize, h: borderThickness },
+                { x: 0, y: 0, w: borderThickness, h: mazeSize },
+                { x: mazeSize - borderThickness, y: 0, w: borderThickness, h: mazeSize }
+            );
+
+            for (let row = 0; row < mazeRows; row++) {
+                for (let col = 0; col < mazeCols; col++) {
+                    if (grid[row][col] === 1) {
+                        walls.push({ x: col * cellSize, y: row * cellSize, w: cellSize, h: cellSize });
+                    } else if (Math.random() < 0.05) {
+                        coins.push({ x: col * cellSize + cellSize / 2, y: row * cellSize + cellSize / 2, r: 10 });
+                    }
+                }
+            }
+
+            // Add block with number 20 on it at a few places
+            blocks = [];
+            for (let i = 0; i < 3; i++) {
+                let placed = false;
+                while (!placed) {
+                    const col = Math.floor(Math.random() * mazeCols);
+                    const row = Math.floor(Math.random() * mazeRows);
+                    if (grid[row][col] === 0) {
+                        blocks.push({ x: col * cellSize, y: row * cellSize, clicks: 0 });
+                        placed = true;
+                    }
+                }
+            }
+        }
+
+        let keys = {};
+        window.addEventListener("keydown", e => keys[e.key] = true);
+        window.addEventListener("keyup", e => keys[e.key] = false);
+
+        const btnUp = document.getElementById("btnUp");
+        const btnDown = document.getElementById("btnDown");
+        const btnLeft = document.getElementById("btnLeft");
+        const btnRight = document.getElementById("btnRight");
+
+        btnUp?.addEventListener("touchstart", () => keys.ArrowUp = true);
+        btnUp?.addEventListener("touchend", () => keys.ArrowUp = false);
+        btnDown?.addEventListener("touchstart", () => keys.ArrowDown = true);
+        btnDown?.addEventListener("touchend", () => keys.ArrowDown = false);
+        btnLeft?.addEventListener("touchstart", () => keys.ArrowLeft = true);
+        btnLeft?.addEventListener("touchend", () => keys.ArrowLeft = false);
+        btnRight?.addEventListener("touchstart", () => keys.ArrowRight = true);
+        btnRight?.addEventListener("touchend", () => keys.ArrowRight = false);
+
+        // Add mouse support for arrow buttons
+        btnUp?.addEventListener("mousedown", () => keys.ArrowUp = true);
+        btnUp?.addEventListener("mouseup", () => keys.ArrowUp = false);
+        btnDown?.addEventListener("mousedown", () => keys.ArrowDown = true);
+        btnDown?.addEventListener("mouseup", () => keys.ArrowDown = false);
+        btnLeft?.addEventListener("mousedown", () => keys.ArrowLeft = true);
+        btnLeft?.addEventListener("mouseup", () => keys.ArrowLeft = false);
+        btnRight?.addEventListener("mousedown", () => keys.ArrowRight = true);
+        btnRight?.addEventListener("mouseup", () => keys.ArrowRight = false);
+
+        function collidesWall(newX, newY) {
+            return walls.some(w =>
+                newX < w.x + w.w &&
+                newX + player.size > w.x &&
+                newY < w.y + w.h &&
+                newY + player.size > w.y
+            );
+        }
+
+        function touchesMazeEdge(x, y) {
+            const mazeLimit = 2000;
+            const margin = 5;
+            return (
+                x < margin ||
+                y < margin ||
+                x + player.size > mazeLimit - margin ||
+                y + player.size > mazeLimit - margin
+            );
+        }
+
+        function gameLoop() {
+            let newX = player.x;
+            let newY = player.y;
+            // Block movement only if player is on an uncleared block
+            let onUnclearedBlock = false;
+            for (const b of blocks) {
+                if (
+                    b.clicks < 20 &&
+                    player.x + player.size > b.x &&
+                    player.x < b.x + 50 &&
+                    player.y + player.size > b.y &&
+                    player.y < b.y + 50
+                ) {
+                    onUnclearedBlock = true;
+                    break;
+                }
+            }
+
+            if (onUnclearedBlock && (keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight)) {
+                newX = player.x;
+                newY = player.y;
+            } else {
+                if (keys.ArrowUp) newY -= 3;
+                if (keys.ArrowDown) newY += 3;
+                if (keys.ArrowLeft) newX -= 3;
+                if (keys.ArrowRight) newX += 3;
+            }
+            if (!collidesWall(newX, newY)) {
+                player.x = newX;
+                player.y = newY;
+            }
+            else if (touchesMazeEdge(newX, newY)) {
+                startLevel();
+                return;
+            }
+
+            camera.x = player.x - canvas.width / 2;
+            camera.y = player.y - canvas.height / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "darkred";
+            walls.forEach(w => ctx.fillRect(w.x - camera.x, w.y - camera.y, w.w, w.h));
+
+            ctx.fillStyle = "yellow";
+            coins = coins.filter(c => {
+                const dx = player.x - c.x;
+                const dy = player.y - c.y;
+                if (Math.hypot(dx, dy) < player.size) {
+                    coinSound.play();
+                    totalCoins++;
+                    collectedThisLevel++;
+                    updateCoinDisplay();
+                    return false;
+                }
+                ctx.beginPath();
+                ctx.arc(c.x - camera.x, c.y - camera.y, c.r, 0, 2 * Math.PI);
+                ctx.fill();
+                return true;
+            });
+
+            // Draw blocks
+            blocks.forEach(b => {
+                if (b.clicks < 20) {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(b.x - camera.x, b.y - camera.y, 50, 50);
+                    ctx.strokeStyle = "yellow";
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(b.x - camera.x, b.y - camera.y, 50, 50);
+                    ctx.fillStyle = "black";
+                    ctx.font = "20px sans-serif";
+                    ctx.fillText(`${20 - b.clicks}`, b.x - camera.x + 12, b.y - camera.y + 30);
+                }
+            });
+
+            const glowSize = 20;
+            const exitCenterX = exit.x + exit.size / 2 - camera.x;
+            const exitCenterY = exit.y + exit.size / 2 - camera.y;
+
+            // Draw glow
+            const gradient = ctx.createRadialGradient(exitCenterX, exitCenterY, 10, exitCenterX, exitCenterY, glowSize);
+            gradient.addColorStop(0, 'rgba(0,255,0,0.7)');
+            gradient.addColorStop(1, 'rgba(0,255,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(exitCenterX, exitCenterY, glowSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw actual exit
+            ctx.fillStyle = "green";
+            ctx.fillRect(exit.x - camera.x, exit.y - camera.y, exit.size, exit.size);
+
+            ctx.fillStyle = "cyan";
+            ctx.beginPath();
+            ctx.moveTo(player.x - camera.x, player.y - camera.y);
+            ctx.lineTo(player.x - camera.x - player.size, player.y - camera.y + player.size * 2);
+            ctx.lineTo(player.x - camera.x + player.size, player.y - camera.y + player.size * 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "black";
+            ctx.font = "16px sans-serif";
+            ctx.fillText(playerName, player.x - camera.x - 20, player.y - camera.y - 10);
+
+            if (
+                player.x > exit.x && player.x < exit.x + exit.size &&
+                player.y > exit.y && player.y < exit.y + exit.size
+            ) {
+                const elapsed = (performance.now() - startTime) / 1000;
+                times.push(elapsed);
+                localStorage.setItem("savedTimes", JSON.stringify(times));
+                totalCoinsDisplay.textContent = totalCoins;
+                showScreen(screenComplete);
+                return;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+        // Canvas click event to detect clicks on blocks
+        canvas.addEventListener("click", function (e) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left + camera.x;
+            const clickY = e.clientY - rect.top + camera.y;
+
+            for (let b of blocks) {
+                if (
+                    b.clicks < 20 &&
+                    clickX >= b.x &&
+                    clickX <= b.x + 50 &&
+                    clickY >= b.y &&
+                    clickY <= b.y + 50
+                ) {
+                    b.clicks++;
+                    break;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

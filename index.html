@@ -11,6 +11,12 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+
+            user-select: none;
+            -webkit-user-select: none;
+            /* Safari */
+            -ms-user-select: none;
+            /* IE 10 and IE 11 */
         }
 
         body,
@@ -246,7 +252,50 @@
         btnBackToMenu.onclick = () => showScreen(screenStart);
 
         let playerName = "";
-        let player = { x: 0, y: 0, size: 20 };
+        let player = { x: 0, y: 0, size: 20, imageLoaded: false };
+        // Load player image
+        const playerImage = new Image();
+        playerImage.src = 'assets/player.png';
+        playerImage.onload = () => {
+            player.imageLoaded = true;
+        };
+        // Load wall image
+        const wallImage = new Image();
+        wallImage.src = 'assets/bricks.png';
+        wallImage.onload = () => {
+            wallImage.loaded = true;
+        };
+
+        // Load floor tile image
+        const floorImage = new Image();
+        floorImage.src = 'assets/floortile.png';
+        floorImage.onload = () => {
+            floorImage.loaded = true;
+        };
+
+        // Load exit pad image
+        const exitImage = new Image();
+        exitImage.src = 'assets/win.png';
+        exitImage.onload = () => {
+            exitImage.loaded = true;
+        };
+
+        // Load coin image
+        const coinImage = new Image();
+        coinImage.src = 'assets/coin.png';
+        coinImage.onload = () => {
+            coinImage.loaded = true;
+        };
+
+        // Load clicktrap image
+        const clickTrapImage = new Image();
+        clickTrapImage.src = 'assets/clicktrap.png';
+        clickTrapImage.onload = () => {
+            clickTrapImage.loaded = true;
+        };
+        ctx.imageSmoothingEnabled = false;
+        // Consistent scale for all tile images
+        const TILE_SCALE = 1; // or adjust to 1.25, 1.5 etc. as needed
         let camera = { x: 0, y: 0 };
         let walls = [];
         let coins = [];
@@ -426,7 +475,7 @@
                     if (grid[row][col] === 1) {
                         walls.push({ x: col * cellSize, y: row * cellSize, w: cellSize, h: cellSize });
                     } else if (Math.random() < 0.05) {
-                        coins.push({ x: col * cellSize + cellSize / 2, y: row * cellSize + cellSize / 2, r: 10 });
+                        coins.push({ x: col * cellSize + cellSize / 2, y: row * cellSize + cellSize / 2, r: 15 });
                     }
                 }
             }
@@ -521,13 +570,9 @@
                 if (keys.ArrowLeft) newX -= 3;
                 if (keys.ArrowRight) newX += 3;
             }
-            if (!collidesWall(newX, newY)) {
+            if (!collidesWall(newX, newY) && !touchesMazeEdge(newX, newY)) {
                 player.x = newX;
                 player.y = newY;
-            }
-            else if (touchesMazeEdge(newX, newY)) {
-                startLevel();
-                return;
             }
 
             camera.x = player.x - canvas.width / 2;
@@ -535,10 +580,50 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = "darkred";
-            walls.forEach(w => ctx.fillRect(w.x - camera.x, w.y - camera.y, w.w, w.h));
+            // Draw tiled floor if loaded
+            if (floorImage.loaded) {
+                const tileW = floorImage.naturalWidth * TILE_SCALE;
+                const tileH = floorImage.naturalHeight * TILE_SCALE;
+                const cols = Math.ceil(canvas.width / tileW) + 2;
+                const rows = Math.ceil(canvas.height / tileH) + 2;
+                const offsetX = Math.floor(camera.x / tileW) * tileW;
+                const offsetY = Math.floor(camera.y / tileH) * tileH;
 
-            ctx.fillStyle = "yellow";
+                for (let x = 0; x < cols; x++) {
+                    for (let y = 0; y < rows; y++) {
+                        ctx.drawImage(
+                            floorImage,
+                            x * tileW - (camera.x % tileW),
+                            y * tileH - (camera.y % tileH),
+                            tileW,
+                            tileH
+                        );
+                    }
+                }
+            }
+
+            // Draw walls using wallImage tiles if loaded, otherwise fallback to color
+            if (wallImage.loaded) {
+                const tileW = wallImage.naturalWidth * TILE_SCALE;
+                const tileH = wallImage.naturalHeight * TILE_SCALE;
+                walls.forEach(w => {
+                    for (let dx = 0; dx < w.w; dx += tileW) {
+                        for (let dy = 0; dy < w.h; dy += tileH) {
+                            ctx.drawImage(
+                                wallImage,
+                                w.x + dx - camera.x,
+                                w.y + dy - camera.y,
+                                tileW,
+                                tileH
+                            );
+                        }
+                    }
+                });
+            } else {
+                ctx.fillStyle = "darkred";
+                walls.forEach(w => ctx.fillRect(w.x - camera.x, w.y - camera.y, w.w, w.h));
+            }
+
             coins = coins.filter(c => {
                 const dx = player.x - c.x;
                 const dy = player.y - c.y;
@@ -549,23 +634,59 @@
                     updateCoinDisplay();
                     return false;
                 }
-                ctx.beginPath();
-                ctx.arc(c.x - camera.x, c.y - camera.y, c.r, 0, 2 * Math.PI);
-                ctx.fill();
+                if (coinImage.loaded) {
+                    ctx.drawImage(
+                        coinImage,
+                        c.x - coinImage.naturalWidth * TILE_SCALE / 2 - camera.x,
+                        c.y - coinImage.naturalHeight * TILE_SCALE / 2 - camera.y,
+                        coinImage.naturalWidth * TILE_SCALE,
+                        coinImage.naturalHeight * TILE_SCALE
+                    );
+                } else {
+                    ctx.fillStyle = "yellow";
+                    ctx.beginPath();
+                    ctx.arc(c.x - camera.x, c.y - camera.y, c.r, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
                 return true;
             });
 
             // Draw blocks
             blocks.forEach(b => {
                 if (b.clicks < 20) {
-                    ctx.fillStyle = "white";
-                    ctx.fillRect(b.x - camera.x, b.y - camera.y, 50, 50);
-                    ctx.strokeStyle = "yellow";
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(b.x - camera.x, b.y - camera.y, 50, 50);
-                    ctx.fillStyle = "black";
-                    ctx.font = "20px sans-serif";
-                    ctx.fillText(`${20 - b.clicks}`, b.x - camera.x + 12, b.y - camera.y + 30);
+                    if (clickTrapImage.loaded) {
+                        ctx.drawImage(
+                            clickTrapImage,
+                            b.x - camera.x,
+                            b.y - camera.y,
+                            clickTrapImage.naturalWidth * TILE_SCALE,
+                            clickTrapImage.naturalHeight * TILE_SCALE
+                        );
+                        ctx.strokeStyle = "yellow";
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(
+                            b.x - camera.x,
+                            b.y - camera.y,
+                            clickTrapImage.naturalWidth * TILE_SCALE,
+                            clickTrapImage.naturalHeight * TILE_SCALE
+                        );
+                        ctx.fillStyle = "black";
+                        ctx.font = "20px sans-serif";
+                        ctx.fillText(
+                            `${20 - b.clicks}`,
+                            b.x - camera.x + 12,
+                            b.y - camera.y + 30
+                        );
+                    } else {
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(b.x - camera.x, b.y - camera.y, 50, 50);
+                        ctx.strokeStyle = "yellow";
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(b.x - camera.x, b.y - camera.y, 50, 50);
+                        ctx.fillStyle = "black";
+                        ctx.font = "20px sans-serif";
+                        ctx.fillText(`${20 - b.clicks}`, b.x - camera.x + 12, b.y - camera.y + 30);
+                    }
                 }
             });
 
@@ -583,16 +704,28 @@
             ctx.fill();
 
             // Draw actual exit
-            ctx.fillStyle = "green";
-            ctx.fillRect(exit.x - camera.x, exit.y - camera.y, exit.size, exit.size);
+            if (exitImage.loaded) {
+                ctx.drawImage(
+                    exitImage,
+                    exit.x - camera.x,
+                    exit.y - camera.y,
+                    exitImage.naturalWidth * TILE_SCALE,
+                    exitImage.naturalHeight * TILE_SCALE
+                );
+            } else {
+                ctx.fillStyle = "green";
+                ctx.fillRect(exit.x - camera.x, exit.y - camera.y, exit.size, exit.size);
+            }
 
-            ctx.fillStyle = "cyan";
-            ctx.beginPath();
-            ctx.moveTo(player.x - camera.x, player.y - camera.y);
-            ctx.lineTo(player.x - camera.x - player.size, player.y - camera.y + player.size * 2);
-            ctx.lineTo(player.x - camera.x + player.size, player.y - camera.y + player.size * 2);
-            ctx.closePath();
-            ctx.fill();
+            if (player.imageLoaded) {
+                ctx.drawImage(
+                    playerImage,
+                    player.x - camera.x - player.size / 2,
+                    player.y - camera.y - player.size / 2,
+                    player.size * 2,
+                    player.size * 2
+                );
+            }
 
             ctx.fillStyle = "black";
             ctx.font = "16px sans-serif";

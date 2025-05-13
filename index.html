@@ -296,6 +296,7 @@
         ctx.imageSmoothingEnabled = false;
         // Consistent scale for all tile images
         const TILE_SCALE = 1; // or adjust to 1.25, 1.5 etc. as needed
+        const TILE_SIZE = 50;
         let camera = { x: 0, y: 0 };
         let walls = [];
         let coins = [];
@@ -580,41 +581,38 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw tiled floor if loaded
+            // Draw tiled floor snapped to grid
             if (floorImage.loaded) {
-                const tileW = floorImage.naturalWidth * TILE_SCALE;
-                const tileH = floorImage.naturalHeight * TILE_SCALE;
-                const cols = Math.ceil(canvas.width / tileW) + 2;
-                const rows = Math.ceil(canvas.height / tileH) + 2;
-                const offsetX = Math.floor(camera.x / tileW) * tileW;
-                const offsetY = Math.floor(camera.y / tileH) * tileH;
-
-                for (let x = 0; x < cols; x++) {
-                    for (let y = 0; y < rows; y++) {
-                        ctx.drawImage(
-                            floorImage,
-                            x * tileW - (camera.x % tileW),
-                            y * tileH - (camera.y % tileH),
-                            tileW,
-                            tileH
-                        );
+                for (let x = -TILE_SIZE; x < canvas.width + TILE_SIZE; x += TILE_SIZE) {
+                    for (let y = -TILE_SIZE; y < canvas.height + TILE_SIZE; y += TILE_SIZE) {
+                        const drawX = x - (camera.x % TILE_SIZE);
+                        const drawY = y - (camera.y % TILE_SIZE);
+                        ctx.drawImage(floorImage, drawX, drawY, TILE_SIZE, TILE_SIZE);
                     }
                 }
             }
 
             // Draw walls using wallImage tiles if loaded, otherwise fallback to color
             if (wallImage.loaded) {
-                const tileW = wallImage.naturalWidth * TILE_SCALE;
-                const tileH = wallImage.naturalHeight * TILE_SCALE;
                 walls.forEach(w => {
-                    for (let dx = 0; dx < w.w; dx += tileW) {
-                        for (let dy = 0; dy < w.h; dy += tileH) {
+                    for (let dx = 0; dx < w.w; dx += TILE_SIZE) {
+                        for (let dy = 0; dy < w.h; dy += TILE_SIZE) {
+                            const aspect = wallImage.naturalWidth / wallImage.naturalHeight;
+                            let drawW = TILE_SIZE;
+                            let drawH = TILE_SIZE;
+
+                            if (aspect > 1) {
+                                drawH = TILE_SIZE / aspect;
+                            } else {
+                                drawW = TILE_SIZE * aspect;
+                            }
+
                             ctx.drawImage(
                                 wallImage,
-                                w.x + dx - camera.x,
-                                w.y + dy - camera.y,
-                                tileW,
-                                tileH
+                                w.x + dx - camera.x + (TILE_SIZE - drawW) / 2,
+                                w.y + dy - camera.y + (TILE_SIZE - drawH) / 2,
+                                drawW,
+                                drawH
                             );
                         }
                     }
@@ -659,23 +657,25 @@
                             clickTrapImage,
                             b.x - camera.x,
                             b.y - camera.y,
-                            clickTrapImage.naturalWidth * TILE_SCALE,
-                            clickTrapImage.naturalHeight * TILE_SCALE
+                            TILE_SIZE,
+                            TILE_SIZE
                         );
                         ctx.strokeStyle = "yellow";
                         ctx.lineWidth = 3;
                         ctx.strokeRect(
                             b.x - camera.x,
                             b.y - camera.y,
-                            clickTrapImage.naturalWidth * TILE_SCALE,
-                            clickTrapImage.naturalHeight * TILE_SCALE
+                            TILE_SIZE,
+                            TILE_SIZE
                         );
                         ctx.fillStyle = "black";
                         ctx.font = "20px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
                         ctx.fillText(
                             `${20 - b.clicks}`,
-                            b.x - camera.x + 12,
-                            b.y - camera.y + 30
+                            b.x - camera.x + TILE_SIZE / 2,
+                            b.y - camera.y + TILE_SIZE / 2
                         );
                     } else {
                         ctx.fillStyle = "white";
@@ -685,7 +685,13 @@
                         ctx.strokeRect(b.x - camera.x, b.y - camera.y, 50, 50);
                         ctx.fillStyle = "black";
                         ctx.font = "20px sans-serif";
-                        ctx.fillText(`${20 - b.clicks}`, b.x - camera.x + 12, b.y - camera.y + 30);
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(
+                            `${20 - b.clicks}`,
+                            b.x - camera.x + TILE_SIZE / 2,
+                            b.y - camera.y + TILE_SIZE / 2
+                        );
                     }
                 }
             });
@@ -705,16 +711,18 @@
 
             // Draw actual exit
             if (exitImage.loaded) {
+                const drawW = TILE_SIZE;
+                const drawH = TILE_SIZE;
                 ctx.drawImage(
                     exitImage,
-                    exit.x - camera.x,
-                    exit.y - camera.y,
-                    exitImage.naturalWidth * TILE_SCALE,
-                    exitImage.naturalHeight * TILE_SCALE
+                    exit.x - camera.x + (TILE_SIZE - drawW) / 2,
+                    exit.y - camera.y + (TILE_SIZE - drawH) / 2,
+                    drawW,
+                    drawH
                 );
             } else {
                 ctx.fillStyle = "green";
-                ctx.fillRect(exit.x - camera.x, exit.y - camera.y, exit.size, exit.size);
+                ctx.fillRect(exit.x - camera.x, exit.y - camera.y, TILE_SIZE, TILE_SIZE);
             }
 
             if (player.imageLoaded) {

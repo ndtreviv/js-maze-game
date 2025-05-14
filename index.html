@@ -28,6 +28,15 @@
             overflow: hidden;
         }
 
+        #background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/background.png');
+            background-size: cover;
+            background-position: center;
+        }
+
         #screen-start,
         #screen-name,
         #screen-game,
@@ -186,6 +195,7 @@
 </head>
 
 <body>
+    <div id="background"></div>
     <div id="gameTitle">MAZE GAME</div>
     <div id="screen-start" class="visible">
         <button id="btnStart1">Start Game</button>
@@ -218,6 +228,8 @@
         src="https://cdn.pixabay.com/download/audio/2022/02/23/audio_4d2d610b20.mp3?filename=button-124476.mp3"></audio>
     <audio id="coinSound"
         src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_b2cb512a44.mp3?filename=coin-pick-up-199316.mp3"></audio>
+    <audio id="dingSound" src="assets/ding.mp3"></audio>
+    <audio id="finishedSound" src="assets/finished.mp3"></audio>
 
     <div id="controls">
         <div></div>
@@ -245,6 +257,8 @@
         const coinCountDisplay = document.getElementById("coinCount");
         const popSound = document.getElementById("popSound");
         const coinSound = document.getElementById("coinSound");
+        const dingSound = document.getElementById("dingSound");
+        const finishedSound = document.getElementById("finishedSound");
         const canvas = document.getElementById("mazeCanvas");
         const ctx = canvas.getContext("2d");
         const timeList = document.getElementById("timeList");
@@ -280,12 +294,18 @@
             exitImage.loaded = true;
         };
 
-        // Load coin image
-        const coinImage = new Image();
-        coinImage.src = 'assets/coin.png';
-        coinImage.onload = () => {
-            coinImage.loaded = true;
-        };
+        // Load animated coin frames
+        const coinFrames = [];
+        const COIN_FRAME_COUNT = 10;
+        let coinFrameIndex = 0;
+        let coinFrameTimer = performance.now();
+        const COIN_FRAME_DURATION = 50; // ms per frame
+
+        for (let i = 1; i <= COIN_FRAME_COUNT; i++) {
+            const img = new Image();
+            img.src = `assets/coin/coin-${i}.png`;
+            coinFrames.push(img);
+        }
 
         // Load clicktrap image
         const clickTrapImage = new Image();
@@ -579,7 +599,28 @@
             camera.x = player.x - canvas.width / 2;
             camera.y = player.y - canvas.height / 2;
 
+            // Coin animation update
+            if (performance.now() - coinFrameTimer > COIN_FRAME_DURATION) {
+                coinFrameIndex = (coinFrameIndex + 1) % COIN_FRAME_COUNT;
+                coinFrameTimer = performance.now();
+            }
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Fill area outside the maze with brick background
+            if (wallImage.loaded) {
+                for (let x = -TILE_SIZE; x < canvas.width + TILE_SIZE; x += TILE_SIZE) {
+                    for (let y = -TILE_SIZE; y < canvas.height + TILE_SIZE; y += TILE_SIZE) {
+                        const worldX = Math.floor((x + camera.x) / TILE_SIZE) * TILE_SIZE;
+                        const worldY = Math.floor((y + camera.y) / TILE_SIZE) * TILE_SIZE;
+
+                        // Only draw bricks where there is no floor tile
+                        if (worldX < 0 || worldY < 0 || worldX >= 2000 || worldY >= 2000) {
+                            ctx.drawImage(wallImage, x, y, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
 
             // Draw tiled floor snapped to grid
             if (floorImage.loaded) {
@@ -627,18 +668,21 @@
                 const dy = player.y - c.y;
                 if (Math.hypot(dx, dy) < player.size) {
                     coinSound.play();
+                    dingSound.play();
                     totalCoins++;
                     collectedThisLevel++;
                     updateCoinDisplay();
                     return false;
                 }
-                if (coinImage.loaded) {
+                // Draw animated coin frame if loaded, else fallback to yellow circle
+                const frame = coinFrames[coinFrameIndex];
+                if (frame?.complete && frame.naturalWidth > 0) {
                     ctx.drawImage(
-                        coinImage,
-                        c.x - coinImage.naturalWidth * TILE_SCALE / 2 - camera.x,
-                        c.y - coinImage.naturalHeight * TILE_SCALE / 2 - camera.y,
-                        coinImage.naturalWidth * TILE_SCALE,
-                        coinImage.naturalHeight * TILE_SCALE
+                        frame,
+                        c.x - TILE_SIZE / 2 - camera.x,
+                        c.y - TILE_SIZE / 2 - camera.y,
+                        TILE_SIZE,
+                        TILE_SIZE
                     );
                 } else {
                     ctx.fillStyle = "yellow";
@@ -747,6 +791,7 @@
                 times.push(elapsed);
                 localStorage.setItem("savedTimes", JSON.stringify(times));
                 totalCoinsDisplay.textContent = totalCoins;
+                finishedSound.play();
                 showScreen(screenComplete);
                 return;
             }

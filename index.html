@@ -196,9 +196,11 @@
 
 <body>
     <div id="background"></div>
-    <div id="gameTitle">MAZE GAME</div>
     <div id="screen-start" class="visible">
-        <button id="btnStart1">Start Game</button>
+        <img id="gameTitle" src="assets/mazegametitle.treviv.png" alt="Maze Game Title"
+            style="width: 80%; max-width: 600px; animation: pulse 2s ease-in-out infinite; margin-bottom: 1em;" />
+        <img id="btnStart1" src="assets/start.png" alt="Start Game"
+            style="width: 200px; cursor: pointer; margin-bottom: 10px;" />
         <button id="btnShowTimes">Times</button>
     </div>
     <div id="screen-name">
@@ -208,6 +210,53 @@
     <div id="screen-game">
         <canvas id="mazeCanvas"></canvas>
         <div id="coinCount">🪙 0</div>
+        <div id="shop-screen" class="hidden"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(240, 220, 180, 0.95); display: none; flex-direction: column; align-items: center; justify-content: space-between; padding: 1em; pointer-events: auto; z-index: 1000;">
+            <div
+                style="align-self: flex-start; font-size: 1.5em; background: white; padding: 0.5em; border-radius: 8px;">
+                🪙
+                <span id="shopCoinCount">0</span>
+            </div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <img src="assets/cosm.arrow.png" data-type="cosmetic" data-img="assets/cosm.arrow.png" data-cost="5"
+                        class="shop-item" style="width: 50px; height: 50px; margin-right: 10px; cursor: pointer;">
+                    <span>5 coins</span>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <img src="assets/cosm.beret.treviv.png" data-type="cosmetic" data-img="assets/cosm.beret.treviv.png"
+                        data-cost="5" class="shop-item"
+                        style="width: 50px; height: 50px; margin-right: 10px; cursor: pointer;">
+                    <span>5 coins</span>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <img src="assets/cosm.devil.treviv.png" data-type="cosmetic" data-img="assets/cosm.devil.treviv.png"
+                        data-cost="10" class="shop-item"
+                        style="width: 50px; height: 50px; margin-right: 10px; cursor: pointer;">
+                    <span>10 coins</span>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <img src="assets/potion.a.treviv.png" data-type="potion" data-img="assets/potion.a.treviv.png"
+                        data-cost="15" data-effect="speed" class="shop-item"
+                        style="width: 50px; height: 50px; margin-right: 10px; cursor: pointer;">
+                    <span>15 coins</span>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <img src="assets/potion.b.treviv.png" data-type="potion" data-img="assets/potion.b.treviv.png"
+                        data-cost="20" data-effect="wallwalk" class="shop-item"
+                        style="width: 50px; height: 50px; margin-right: 10px; cursor: pointer;">
+                    <span>20 coins</span>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <img src="assets/potion.c.treviv.png" data-type="potion" data-img="assets/potion.c.treviv.png"
+                        data-cost="15" data-effect="doublecoins" class="shop-item"
+                        style="width: 50px; height: 50px; margin-right: 10px; cursor: pointer;">
+                    <span>15 coins</span>
+                </div>
+            </div>
+            <button id="btnShopBack" type="button"
+                style="pointer-events: auto; padding: 0.8em 2em; background: red; color: white; border: none; border-radius: 8px; font-size: 1.2em;">BACK</button>
+        </div>
     </div>
     <div id="screen-complete">
         <h2>Level Complete!</h2>
@@ -224,6 +273,7 @@
         <button id="btnBackToMenu">Back</button>
     </div>
 
+
     <audio id="popSound"
         src="https://cdn.pixabay.com/download/audio/2022/02/23/audio_4d2d610b20.mp3?filename=button-124476.mp3"></audio>
     <audio id="coinSound"
@@ -231,13 +281,17 @@
     <audio id="dingSound" src="assets/ding.mp3"></audio>
     <audio id="finishedSound" src="assets/finished.mp3"></audio>
 
-    <div id="controls">
+    <div id="controls" style="display: none;">
         <div></div>
-        <div id="btnUp" class="control-btn">⬆️</div>
+        <div id="btnUp" class="control-btn"><img src="assets/up.arrow.treviv.png" alt="Up"
+                style="width: 100%; height: 100%; object-fit: contain;" /></div>
         <div></div>
-        <div id="btnLeft" class="control-btn">⬅️</div>
-        <div id="btnDown" class="control-btn">⬇️</div>
-        <div id="btnRight" class="control-btn">➡️</div>
+        <div id="btnLeft" class="control-btn"><img src="assets/left.arrow.png" alt="Left"
+                style="width: 100%; height: 100%; object-fit: contain;" /></div>
+        <div id="btnDown" class="control-btn"><img src="assets/down.arrow.png" alt="Down"
+                style="width: 100%; height: 100%; object-fit: contain;" /></div>
+        <div id="btnRight" class="control-btn"><img src="assets/right.arrow.treviv.png" alt="Right"
+                style="width: 100%; height: 100%; object-fit: contain;" /></div>
     </div>
 
     <script>
@@ -267,6 +321,17 @@
 
         let playerName = "";
         let player = { x: 0, y: 0, size: 20, imageLoaded: false };
+        // Potion effect control flags
+        let speedMultiplier = 1;
+        let wallWalkEnabled = false;
+        let coinMultiplier = 1;
+        // Shop variables
+        let shop = null;
+        const shopImage = new Image();
+        shopImage.src = 'assets/shop.treviv.png';
+        shopImage.onload = () => {
+            shopImage.loaded = true;
+        };
         // Load player image
         const playerImage = new Image();
         playerImage.src = 'assets/player.png';
@@ -331,6 +396,14 @@
         function showScreen(screen) {
             [screenStart, screenName, screenGame, screenComplete, screenTimes].forEach(s => s.classList.remove("visible"));
             screen.classList.add("visible");
+
+            const controls = document.getElementById("controls");
+            if (screen === screenGame) {
+                controls.style.display = "grid";
+            } else {
+                controls.style.display = "none";
+                document.getElementById("shop-screen").classList.add("hidden");
+            }
         }
 
         btnStart1.onclick = () => {
@@ -341,7 +414,12 @@
         btnStart2.onclick = () => {
             gameTitle.className = 'hidden';
             playerName = nameInput.value || "Player";
+            totalCoins = parseInt(localStorage.getItem("totalCoins") || "0", 10);
+            updateCoinDisplay();
             showScreen(screenGame);
+            const shopScreen = document.getElementById("shop-screen");
+            shopScreen.classList.add("hidden");
+            shopScreen.style.display = "none";
             startLevel();
         };
 
@@ -444,6 +522,7 @@
 
         function updateCoinDisplay() {
             coinCountDisplay.textContent = `🪙 ${totalCoins}`;
+            localStorage.setItem("totalCoins", totalCoins);
         }
 
         function generateMaze() {
@@ -513,6 +592,28 @@
                         placed = true;
                     }
                 }
+            }
+
+            // Place shop only if current level is 5 (times.length === 4)
+            if (times.length === 4) {
+                let placed = false;
+                const maxSpawnCol = Math.min(5, mazeCols - 2);
+                const maxSpawnRow = Math.min(5, mazeRows - 2);
+                while (!placed) {
+                    const col = Math.floor(Math.random() * maxSpawnCol);
+                    const row = Math.floor(Math.random() * maxSpawnRow);
+                    if (
+                        grid[row][col] === 0 &&
+                        grid[row][col + 1] === 0 &&
+                        grid[row + 1][col] === 0 &&
+                        grid[row + 1][col + 1] === 0
+                    ) {
+                        shop = { x: col * cellSize, y: row * cellSize, size: cellSize * 2 };
+                        placed = true;
+                    }
+                }
+            } else {
+                shop = null;
             }
         }
 
@@ -586,12 +687,13 @@
                 newX = player.x;
                 newY = player.y;
             } else {
-                if (keys.ArrowUp) newY -= 3;
-                if (keys.ArrowDown) newY += 3;
-                if (keys.ArrowLeft) newX -= 3;
-                if (keys.ArrowRight) newX += 3;
+                const moveSpeed = 3 * speedMultiplier;
+                if (keys.ArrowUp) newY -= moveSpeed;
+                if (keys.ArrowDown) newY += moveSpeed;
+                if (keys.ArrowLeft) newX -= moveSpeed;
+                if (keys.ArrowRight) newX += moveSpeed;
             }
-            if (!collidesWall(newX, newY) && !touchesMazeEdge(newX, newY)) {
+            if ((!collidesWall(newX, newY) || wallWalkEnabled) && !touchesMazeEdge(newX, newY)) {
                 player.x = newX;
                 player.y = newY;
             }
@@ -669,8 +771,8 @@
                 if (Math.hypot(dx, dy) < player.size) {
                     coinSound.play();
                     dingSound.play();
-                    totalCoins++;
-                    collectedThisLevel++;
+                    totalCoins += coinMultiplier;
+                    collectedThisLevel += coinMultiplier;
                     updateCoinDisplay();
                     return false;
                 }
@@ -779,6 +881,17 @@
                 );
             }
 
+            // Draw shop if present and loaded
+            if (shop && shopImage.loaded) {
+                ctx.drawImage(
+                    shopImage,
+                    shop.x - camera.x,
+                    shop.y - camera.y,
+                    shop.size,
+                    shop.size
+                );
+            }
+
             ctx.fillStyle = "black";
             ctx.font = "16px sans-serif";
             ctx.fillText(playerName, player.x - camera.x - 20, player.y - camera.y - 10);
@@ -815,6 +928,100 @@
                     b.clicks++;
                     break;
                 }
+            }
+        });
+
+        // Handle shop click
+        canvas.addEventListener("click", function (e) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left + camera.x;
+            const clickY = e.clientY - rect.top + camera.y;
+
+            if (shop && shopImage.loaded) {
+                const withinShop =
+                    clickX >= shop.x &&
+                    clickX <= shop.x + shop.size &&
+                    clickY >= shop.y &&
+                    clickY <= shop.y + shop.size;
+
+                const nearPlayer =
+                    Math.abs(player.x - shop.x) < 100 &&
+                    Math.abs(player.y - shop.y) < 100;
+
+                if (withinShop && nearPlayer) {
+                    const shopScreen = document.getElementById("shop-screen");
+                    shopScreen.classList.remove("hidden");
+                    shopScreen.style.display = "flex";
+                    document.getElementById("shopCoinCount").textContent = totalCoins;
+                }
+            }
+        });
+
+        // Handle shop BACK button
+        document.getElementById("btnShopBack").onclick = () => {
+            const shopScreen = document.getElementById("shop-screen");
+            shopScreen.classList.add("hidden");
+            shopScreen.style.display = "none";
+        };
+        // Shop item purchase logic
+        document.querySelectorAll('.shop-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (item.classList.contains('sold')) return;
+
+                const cost = parseInt(item.dataset.cost, 10);
+                if (totalCoins < cost) return;
+
+                totalCoins -= cost;
+                updateCoinDisplay();
+                document.getElementById("shopCoinCount").textContent = totalCoins;
+                item.classList.add('sold');
+
+                const outOfStock = document.createElement('span');
+                outOfStock.textContent = 'OUT OF STOCK';
+                outOfStock.style.color = 'red';
+                outOfStock.style.marginLeft = '10px';
+                item.parentNode.appendChild(outOfStock);
+
+                const type = item.dataset.type;
+                const imgSrc = item.dataset.img;
+
+                if (type === 'cosmetic') {
+                    playerImage.src = imgSrc;
+                } else if (type === 'potion') {
+                    const potionDisplay = document.createElement('img');
+                    potionDisplay.src = imgSrc;
+                    potionDisplay.style.width = '40px';
+                    potionDisplay.style.height = '40px';
+                    potionDisplay.style.position = 'absolute';
+                    potionDisplay.style.bottom = '10px';
+                    potionDisplay.style.left = `${10 + document.querySelectorAll('.potion-icon').length * 50}px`;
+                    potionDisplay.style.border = '2px solid black';
+                    potionDisplay.className = 'potion-icon';
+                    document.body.appendChild(potionDisplay);
+                }
+            });
+        });
+
+        // Potion activation logic
+        document.body.addEventListener('click', function (e) {
+            const potion = e.target;
+            if (!potion.classList.contains('potion-icon')) return;
+
+            const effect = Array.from(document.querySelectorAll('.shop-item'))
+                .find(item => item.dataset.img === potion.src)?.dataset.effect;
+            if (!effect) return;
+
+            potion.remove();
+
+            if (effect === 'speed') {
+                speedMultiplier = 2;
+                setTimeout(() => speedMultiplier = 1, 5000);
+            } else if (effect === 'wallwalk') {
+                wallWalkEnabled = true;
+                setTimeout(() => wallWalkEnabled = false, 5000);
+            } else if (effect === 'doublecoins') {
+                coinMultiplier = 2;
+                setTimeout(() => coinMultiplier = 1, 10000);
             }
         });
     </script>
